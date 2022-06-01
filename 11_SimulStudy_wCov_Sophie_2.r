@@ -37,29 +37,23 @@ beta_cov <- c(-log(2), log(5) / 2)
 make_Xcov <- function(n_obs, n_observer, n_cov) {
   Xcov <- vector(mode = 'list', length = n_observer)
   for(k in 1:n_observer) {
-    Xcov[[k]] <- cbind(rep(1, n_obs), replicate(n_cov, rnorm(n_obs,0,1) + rbinom(n_obs, size = 1, prob = 0.05)))
+    Xcov[[k]] <- cbind(rep(1, n_obs), replicate(n_cov, rnorm(n_obs,0.2,1) + rbinom(n_obs, size = 1, prob = 0.05)))
   }
   return(Xcov)
 }
 
 #=================== Heaping behaviour
 # first observer
-param_obs2 = param_obs1 = list()
-param_obs2$param_distrib <- param_obs1$param_distrib <- list(transfo_over_dispersion = log(omega - 1),
+param_obs1 = list()
+param_obs1$param_distrib <- list(transfo_over_dispersion = log(omega - 1),
                                  beta = c(log(mu - 1), beta_cov) # because shifted distribution
                                  )
-
 param_obs1$param_heaping <- list(lambda_0 = 0.1,
                                  tau_0 = 10,
                                  threshold = 0.05,
                                  gamma = c(0.2, -11.5, -35.0)
                                  )
 
-# param_obs2$param_heaping <- list(lambda_0 = 0.3,
-#                                  tau_0 = 25,
-#                                  threshold = 0.05,
-#                                  gamma = c(0.2, -5.0, -15.0)
-#                                  )
 param_sim <- list(param_obs1) #, param_obs2)#, param_obs3)
 
 #-- plots heaping behavior 
@@ -81,10 +75,9 @@ ggplot(data_heap,aes(x=true_count,y=Prob,col=heaping_level))+geom_line() + facet
 
 
 ##############################################################
-#------------ Simulation data --------------------------------
+#------------ SIMULATING DATA ------------------------
 ##############################################################
 
-#distrib <- c("Poisson", "Negbin") # data-generating mechanism
 distrib <- c("Poisson") # only Poisson
 
 #---- for reproducibility
@@ -132,9 +125,9 @@ for(l in rev(distrib)) {
     save(list = c("all_data"), file = paste("res_Sophie/simul_data_", l, "_n", j, ".RData", sep = ""))
   }
 }
-
+ 
 ###############################################################"
-### ------------------------  check the simulations
+###    check the simulations
 ############################################################### 
 
 
@@ -156,29 +149,8 @@ sum_stat <- as.data.frame(sum_stat); names(sum_stat) <- c("mean_X", "sd_X", "max
 skimr::skim(sum_stat)
 
 # ------------------------
-### Compare Poisson  - Negbin
-# ------------------------
-# load(paste0('res_Sophie/simul_data_Poisson_n', 200,'.RData'))
-# data_heap <- do.call("rbind", lapply(1:100,function(l){all_data[[l]]$sim=l; return(all_data[[l]])}))
-# data_heap$model = 'Poisson'
-
-
-#load(paste0('res_Sophie/simul_data_Negbin_n', 200,'.RData'))
-#data_heap2 <- do.call("rbind", lapply(1:100,function(l){all_data[[l]]$sim=l; return(all_data[[l]])}))
-#data_heap2$model = 'Negbin'
-#data_heap <- rbind(data_heap, data_heap2)
-
-# 
-# data_heap <- data_heap %>% mutate(model = as.factor(model)) 
-# data_heap %>%filter(Y<1000) %>% ggplot(aes(x=Y,color=model)) + geom_histogram()
-# data_heap %>%filter(data_heap$X<10) %>% filter(sim_G!=1)
-#data_heap %>%filter(data_heap$Y==0)
-# ------------------------
-#-- Compare the 3 distributions of experts for Poisson or Negbin
-# ------------------------
 
 model = 'Poisson'
-#model ="Negbin"
 load(paste0('res_Sophie/simul_data_',model,'_n', max(n_obs),'.RData'))
 data_heap <- do.call("rbind", lapply(1:n_sim,function(l){all_data[[l]]$sim=l; return(all_data[[l]])}))
 data_heap <- data_heap %>%mutate(Observer =as.factor(Observer)) %>% mutate(Small = as.factor(ifelse(Y<500,'Y < 500','Y >= 500')))
@@ -276,56 +248,7 @@ get_bayes <- function(all_data,n,distrib,n_chain = 4,n_iter=2000,n_warm=1000,n_t
                                   control = hmc_control
                                   )
 
-    # negbin_heap[[i]] <- sampling(stan_negbin_cov,
-    #                              data = standatalist,
-    #                              pars = c("intercept", "slope", "gamma", "tau_0", "lambda_0", "sup_heaping", "overdispersion", "log_lik"),
-    #                              chains = n_chain,
-    #                              iter = n_iter,
-    #                              warmup = n_warm,
-    #                              thin = n_thin,
-    #                              control = hmc_control
-    #                              )
-    ### several observers
-    # prior_cholmat <- array(NA, dim = c(length(unique(all_data[[i]]$Observer)), 5, 5))
-    # for(k in 1:length(unique(all_data[[i]]$Observer))) {
-    #   prior_cholmat[k, , ] <- diag(c(log(3) ,log(5) /2, log(5) / 2, 5.0, log(5) / 2)) %*% diag(5)
-    # }
-    # n_observer <- length(unique(all_data[[i]]$Observer))
-    # standatalist <- data4stan(countdata = all_data[[i]]$Y,
-    #                           covar = cbind(rep(1, nrow(all_data[[i]])), as.matrix(all_data[[i]][, grep("cov", names(all_data[[i]]))])),
-    #                           heaping_levels = heaping_levels,
-    #                           prior_location_intercept = log(10),
-    #                           prior_scale_intercept = log(5) / 2,
-    #                           prior_location = matrix(rep(c(log(10), log(0.5), log(0.2), 0, log(10)), 
-    #                                                       n_observer 
-    #                                                       ),
-    #                                                   nrow =  n_observer, byrow = TRUE
-    #                                                   ),
-    #                           prior_cholmat = prior_cholmat,
-    #                           threshold = 0.05
-    #                           )
-    # standatalist$n_observer <- n_observer 
-    # standatalist$OBS <- all_data[[i]]$Observer
-    # 
-    # poisson_mheap[[i]] <- sampling(stan_poisson_cov_multi,
-    #                                data = standatalist,
-    #                                pars = c("intercept", "slope", "gamma", "tau_0", "lambda_0", "sup_heaping", "log_lik"),
-    #                                chains = n_chain,
-    #                                iter = n_iter,
-    #                                warmup = n_warm,
-    #                                thin = n_thin,
-    #                                control = hmc_control
-    #                                )
     
-    # negbin_mheap[[i]] <- sampling(stan_negbin_cov_multi,
-    #                               data = standatalist,
-    #                               pars = c("intercept", "slope", "gamma", "tau_0", "lambda_0", "sup_heaping", "overdispersion", "log_lik"),
-    #                               chains = n_chain,
-    #                               iter = n_iter,
-    #                               warmup = n_warm,
-    #                               thin = n_thin,
-    #                               control = hmc_control
-    #                               )
     
   }
   save(file = paste("res_Sophie/stan_data_", distrib, "_n", n, ".RData", sep = ""),

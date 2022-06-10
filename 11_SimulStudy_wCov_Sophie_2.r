@@ -27,7 +27,7 @@ n_observer <- 1
 n_obs <- c(200, 500, 1000)
 n_tot <- n_observer * n_obs
 
-mu <- 100 # mean
+mu <- 90 # mean
 omega <- 1000 # overdispersion
 heaping_levels <- c(1, 10, 50, 100)
 
@@ -37,7 +37,7 @@ beta_cov <- c(-log(2), log(5) / 2)
 make_Xcov <- function(n_obs, n_observer, n_cov) {
   Xcov <- vector(mode = 'list', length = n_observer)
   for(k in 1:n_observer) {
-    Xcov[[k]] <- cbind(rep(1, n_obs), replicate(n_cov, rnorm(n_obs,0.2,1) + rbinom(n_obs, size = 1, prob = 0.05)))
+    Xcov[[k]] <- cbind(rep(1, n_obs), replicate(n_cov, runif(n_obs,-1,1)))
   }
   return(Xcov)
 }
@@ -139,13 +139,13 @@ percent <- as.data.frame(percent); names(percent) <- c("no_heaping", paste0('hea
 skimr::skim(percent)
 ### summary statistics
 sum_stat <- do.call('rbind', lapply(1:n_sim, function(x) {
-  c(mean(all_data[[x]]$X), sd(all_data[[x]]$X), max(all_data[[x]]$X), 
-    mean(all_data[[x]]$Y), sd(all_data[[x]]$Y), max(all_data[[x]]$Y)
+  c(min(all_data[[x]]$X),mean(all_data[[x]]$X), sd(all_data[[x]]$X), max(all_data[[x]]$X), 
+    min(all_data[[x]]$Y), mean(all_data[[x]]$Y), sd(all_data[[x]]$Y), max(all_data[[x]]$Y)
     ) 
   }
 )
 )
-sum_stat <- as.data.frame(sum_stat); names(sum_stat) <- c("mean_X", "sd_X", "max_X", "mean_Y", "sd_Y", "max_Y")
+sum_stat <- as.data.frame(sum_stat); names(sum_stat) <- c("min_X","mean_X", "sd_X", "max_X", "min_Y","mean_Y", "sd_Y", "max_Y")
 skimr::skim(sum_stat)
 
 # ------------------------
@@ -160,13 +160,14 @@ data_heap  %>% ggplot(aes(x=Y,color= Observer)) + geom_histogram(fill="white")+ 
 data_heap %>% mutate(sim_G = as.factor(sim_G))%>% count(sim_G) %>%mutate(freq = n / sum(n)*100)
 
 #-------------------- 
+seuil <- 200
 data_heap %>% ggplot(aes(x=X,y=Y,color=Observer)) + geom_point() + scale_x_continuous(trans='log') + scale_y_continuous(trans='log') 
-data_heap %>% filter(X>=400) %>% ggplot(aes(x=X,y=Y,color=as.factor(sim_G))) + geom_point() + scale_x_continuous(trans='log') + scale_y_continuous(trans='log') + geom_abline(intercept =0, slope=1)
-data_heap %>% filter(X <250) %>% ggplot(aes(x=X,y=Y,color=as.factor(sim_G))) + geom_point()  + geom_abline(intercept =0, slope=1)
+data_heap %>% filter(X>=seuil) %>% ggplot(aes(x=X,y=Y,color=as.factor(sim_G))) + geom_point() + scale_x_continuous(trans='log') + scale_y_continuous(trans='log') + geom_abline(intercept =0, slope=1)
+data_heap %>% filter(X <seuil) %>% ggplot(aes(x=X,y=Y,color=as.factor(sim_G))) + geom_point()  + geom_abline(intercept =0, slope=1)
 data_heap %>% mutate(RMSE_X_Y= sqrt((X-Y)^2/X^2)*100) %>% filter(sim_G>1) %>% ggplot(aes(x=X,y=RMSE_X_Y,color=as.factor(sim_G))) + geom_point() + facet_grid(.~as.factor(sim_G),scales="free")
 data_heap %>% mutate(RMSE_X_Y= sqrt((X-Y)^2/X^2)*100) %>% filter(sim_G == 4) %>%filter(X<100)%>% ggplot(aes(x=X,y=RMSE_X_Y,color=as.factor(sim_G))) + geom_point() + facet_grid(.~as.factor(sim_G),scales="free")
-data_heap%>% filter(X>=400) %>% ggplot(aes(x=X)) + geom_histogram() 
-data_heap%>% filter(X>=400)  %>% ggplot(aes(x=Y)) + geom_histogram() 
+data_heap%>% filter(X>=seuil) %>% ggplot(aes(x=X)) + geom_histogram() 
+data_heap%>% filter(X>=seuil)  %>% ggplot(aes(x=Y)) + geom_histogram() 
 
 
 
